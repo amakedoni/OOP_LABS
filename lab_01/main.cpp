@@ -41,9 +41,11 @@ bool create_array(int*& arr, std::size_t& size) {
     std::size_t new_size = 0;
     if (!read_size("Размер: ", new_size)) return false;
     int* created = array_create(new_size);
+    if (new_size != 0) {
+        std::cout << "Введите " << new_size << " целых чисел (через пробел или по одному на строке):\n";
+    }
     for (std::size_t i = 0; i < new_size; ++i) {
-        std::cout << '[' << i << "] ";
-        if (!read_int("Элемент: ", created[i])) {
+        if (!read_int("", created[i])) {
             array_delete(created);
             return false;
         }

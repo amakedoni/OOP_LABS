@@ -1,71 +1,60 @@
 #include "matrix.h"
 
-#include <cerrno>
-#include <charconv>
 #include <cctype>
 #include <cmath>
-#include <cstdlib>
+#include <exception>
 #include <iostream>
+#include <limits>
 #include <new>
-#include <stdexcept>
 
 namespace {
-// Читаем целый токен, в том числе слишком длинный, без динамических контейнеров.
-bool read_token(char (&text)[128]) {
-    std::cin >> std::ws;
-    if (!std::cin.good()) return false;
-    std::size_t length = 0;
-    bool too_long = false;
-    char ch;
-    while (std::cin.get(ch)) {
-        if (std::isspace(static_cast<unsigned char>(ch))) break;
-        if (length + 1 < sizeof(text)) text[length++] = ch;
-        else too_long = true;
-    }
-    text[length] = '\0';
-    if (too_long) text[0] = '\0';
-    return true;
+bool number_finished() {
+    const int next = std::cin.peek();
+    return next == std::char_traits<char>::eof() ||
+           std::isspace(static_cast<unsigned char>(next));
 }
 
 bool read_size(const char* prompt, std::size_t& value) {
-    char text[128];
     while (true) {
         std::cout << prompt;
-        if (!read_token(text)) return false;
-        std::size_t length = 0;
-        while (text[length] != '\0') ++length;
-        const auto result = std::from_chars(text, text + length, value);
-        if (result.ec == std::errc{} && result.ptr == text + length) return true;
+        int number = 0;
+        if (std::cin >> number) {
+            if (number >= 0 && number_finished()) {
+                value = static_cast<std::size_t>(number);
+                return true;
+            }
+        }
+        if (std::cin.eof() || std::cin.bad()) return false;
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         std::cout << "Ошибка ввода: нужно целое неотрицательное число.\n";
     }
 }
 
 bool read_value(const char* prompt, double& value) {
-    char text[128];
     while (true) {
         std::cout << prompt;
-        if (!read_token(text)) return false;
-        char* end = nullptr;
-        errno = 0;
-        value = std::strtod(text, &end);
-        if (end != text && *end == '\0' && errno != ERANGE && std::isfinite(value)) {
-            return true;
+        if (std::cin >> value) {
+            if (std::isfinite(value) && number_finished()) return true;
         }
+        if (std::cin.eof() || std::cin.bad()) return false;
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         std::cout << "Ошибка ввода: нужно конечное число, дробная часть через точку.\n";
     }
 }
 
 bool read_matrix(Matrix& target) {
     std::size_t rows, cols;
-    if (!read_size("Количество строк: ", rows) ||
-        !read_size("Количество столбцов: ", cols)) return false;
+    if (!read_size("Количество строк: ", rows)) return false;
+    if (!read_size("Количество столбцов: ", cols)) return false;
     Matrix result(rows, cols);
     std::cout << "Введите элементы по строкам (можно через пробел):\n";
     if (cols != 0) {
         for (std::size_t r = 0; r < rows; ++r) {
             for (std::size_t c = 0; c < cols; ++c) {
                 double value;
-                if (!read_value("Элемент: ", value)) return false;
+                if (!read_value("", value)) return false;
                 result.set(r, c, value);
             }
         }
@@ -81,18 +70,11 @@ void show(const Matrix& matrix) {
 }
 
 void show_symmetry(const Matrix& matrix) {
-    std::cout << "Симметрична: " << (matrix.is_symmetric() ? "да" : "нет") << '\n';
-}
-
-bool edit(Matrix& matrix) {
-    std::size_t row, col;
-    double value;
-    if (!read_size("Строка (с 0): ", row) ||
-        !read_size("Столбец (с 0): ", col) ||
-        !read_value("Новое значение: ", value)) return false;
-    matrix.set(row, col, value);
-    show(matrix);
-    return true;
+    if (matrix.is_symmetric()) {
+        std::cout << "Симметрична: да\n";
+    } else {
+        std::cout << "Симметрична: нет\n";
+    }
 }
 
 void demonstrate() {
@@ -121,44 +103,55 @@ void demonstrate() {
 }
 
 void menu() {
-    std::cout << "\n1. Создать матрицу\n2. Напечатать матрицу\n"
-                 "3. Изменить элемент\n4. Прибавить матрицу\n"
-                 "5. Умножить на матрицу\n6. Проверить симметричность\n"
-                 "7. Примеры из задания\n0. Выход\n";
+    std::cout << "\n1. Создать матрицу\n"
+                 "2. Напечатать матрицу\n"
+                 "3. Изменить элемент\n"
+                 "4. Прибавить матрицу\n"
+                 "5. Умножить на матрицу\n"
+                 "6. Проверить симметричность\n"
+                 "7. Примеры из задания\n"
+                 "0. Выход\n";
 }
 }
 
 int main() {
     std::cout << "Лабораторная работа 2. Семейство C, вариант 16. Matrix\n";
     Matrix matrix;
-    bool running = true;
-    while (running) {
+    while (true) {
         menu();
         std::size_t choice;
         if (!read_size("Пункт: ", choice)) break;
+        if (choice == 0) break;
         try {
-            switch (choice) {
-            case 0: running = false; break;
-            case 1:
-                running = read_matrix(matrix);
-                if (running) show(matrix);
-                break;
-            case 2: show(matrix); break;
-            case 3: running = edit(matrix); break;
-            case 4:
-            case 5: {
+            if (choice == 1) {
+                if (!read_matrix(matrix)) break;
+                show(matrix);
+            } else if (choice == 2) {
+                show(matrix);
+            } else if (choice == 3) {
+                std::size_t row, col;
+                double value;
+                if (!read_size("Строка (с 0): ", row)) break;
+                if (!read_size("Столбец (с 0): ", col)) break;
+                if (!read_value("Новое значение: ", value)) break;
+                matrix.set(row, col, value);
+                show(matrix);
+            } else if (choice == 4 || choice == 5) {
                 std::cout << "Введите вторую матрицу:\n";
                 Matrix other;
-                running = read_matrix(other);
-                if (!running) break;
-                if (choice == 4) matrix.add(other);
-                else matrix.mul(other);
+                if (!read_matrix(other)) break;
+                if (choice == 4) {
+                    matrix.add(other);
+                } else {
+                    matrix.mul(other);
+                }
                 show(matrix);
-                break;
-            }
-            case 6: show_symmetry(matrix); break;
-            case 7: demonstrate(); break;
-            default: std::cout << "Неизвестный пункт меню.\n"; break;
+            } else if (choice == 6) {
+                show_symmetry(matrix);
+            } else if (choice == 7) {
+                demonstrate();
+            } else {
+                std::cout << "Неизвестный пункт меню.\n";
             }
         } catch (const std::bad_alloc&) {
             std::cout << "Ошибка: недостаточно памяти.\n";

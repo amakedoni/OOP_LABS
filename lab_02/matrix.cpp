@@ -28,17 +28,16 @@ Matrix::Matrix(const Matrix& other) : Matrix(other.rows_, other.cols_) {
     }
 }
 
-Matrix::Matrix(Matrix&& other) noexcept {
+Matrix::Matrix(Matrix&& other) {
     swap(other);
 }
 
-Matrix& Matrix::operator=(Matrix other) noexcept {
-    // Параметр уже скопирован или перемещён; его деструктор освободит старый буфер.
+Matrix& Matrix::operator=(Matrix other) {
     swap(other);
     return *this;
 }
 
-void Matrix::swap(Matrix& other) noexcept {
+void Matrix::swap(Matrix& other) {
     std::swap(rows_, other.rows_);
     std::swap(cols_, other.cols_);
     std::swap(data_, other.data_);
@@ -71,7 +70,6 @@ void Matrix::mul(const Matrix& other) {
     if (cols_ != other.rows_) {
         throw std::invalid_argument("Multiplication requires left.cols == right.rows");
     }
-    // Отдельный результат сохраняет исходные данные даже при mul(*this).
     Matrix result(rows_, other.cols_);
     if (cols_ != 0 && other.cols_ != 0) {
         for (std::size_t r = 0; r < rows_; ++r) {
@@ -87,7 +85,7 @@ void Matrix::mul(const Matrix& other) {
     swap(result);
 }
 
-bool Matrix::is_symmetric() const noexcept {
+bool Matrix::is_symmetric() const {
     if (rows_ != cols_) return false;
     for (std::size_t r = 0; r < rows_; ++r) {
         for (std::size_t c = r; c < cols_; ++c) {

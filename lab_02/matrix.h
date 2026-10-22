@@ -6,21 +6,21 @@
 
 class Matrix {
 public:
-    Matrix() noexcept = default;
+    Matrix() = default;
     Matrix(std::size_t rows, std::size_t cols, double fill = 0.0);
     Matrix(const Matrix& other);
-    Matrix(Matrix&& other) noexcept;
-    Matrix& operator=(Matrix other) noexcept;
+    Matrix(Matrix&& other);
+    Matrix& operator=(Matrix other);
     ~Matrix();
 
-    void swap(Matrix& other) noexcept;
-    [[nodiscard]] std::size_t rows() const noexcept { return rows_; }
-    [[nodiscard]] std::size_t cols() const noexcept { return cols_; }
-    [[nodiscard]] double get(std::size_t r, std::size_t c) const;
+    void swap(Matrix& other);
+    std::size_t rows() const { return rows_; }
+    std::size_t cols() const { return cols_; }
+    double get(std::size_t r, std::size_t c) const;
     void set(std::size_t r, std::size_t c, double value);
     void add(const Matrix& other);
     void mul(const Matrix& other);
-    [[nodiscard]] bool is_symmetric() const noexcept;
+    bool is_symmetric() const;
     void print(std::ostream& out) const;
 
 private:

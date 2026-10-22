@@ -5,11 +5,7 @@
 #include <ostream>
 #include <streambuf>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
-
-static_assert(std::is_nothrow_move_constructible_v<Matrix>);
-static_assert(std::is_nothrow_move_assignable_v<Matrix>);
 
 TEST(MatrixStorage, DefaultMatrixIsEmpty) {
     const Matrix matrix;
