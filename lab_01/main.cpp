@@ -3,9 +3,7 @@
 #include <cctype>
 #include <iostream>
 #include <limits>
-#include <new>
 
-namespace {
 bool read_int(const char* prompt, int& value) {
     while (true) {
         std::cout << prompt;
@@ -41,6 +39,10 @@ bool create_array(int*& arr, std::size_t& size) {
     std::size_t new_size = 0;
     if (!read_size("Размер: ", new_size)) return false;
     int* created = array_create(new_size);
+    if (new_size != 0 && created == nullptr) {
+        std::cout << "Не удалось выделить память. Исходный массив сохранён.\n";
+        return true;
+    }
     if (new_size != 0) {
         std::cout << "Введите " << new_size << " целых чисел (через пробел или по одному на строке):\n";
     }
@@ -68,7 +70,6 @@ void print_menu() {
                  "8. Бинарный поиск\n"
                  "0. Выход\n";
 }
-}
 
 int main() {
     int* arr = nullptr;
@@ -81,104 +82,122 @@ int main() {
         print_menu();
         int choice = 0;
         if (!read_int("Ваш выбор: ", choice)) break;
-        try {
-            switch (choice) {
-                case 0:
+        switch (choice) {
+            case 0:
+                running = false;
+                break;
+            case 1:
+                running = create_array(arr, size);
+                break;
+            case 2:
+            case 6:
+                array_print(arr, size);
+                break;
+            case 3: {
+                std::size_t pos = 0;
+                int value = 0;
+                if (!read_size("Позиция вставки: ", pos)) {
                     running = false;
                     break;
-                case 1:
-                    running = create_array(arr, size);
-                    break;
-                case 2:
-                case 6:
-                    array_print(arr, size);
-                    break;
-                case 3: {
-                    std::size_t pos = 0;
-                    int value = 0;
-                    if (!read_size("Позиция вставки: ", pos)) {
-                        running = false;
-                        break;
-                    }
-                    if (pos > size) {
-                        std::cout << "Недопустимая позиция.\n";
-                        break;
-                    }
-                    if (!read_int("Значение: ", value)) {
-                        running = false;
-                        break;
-                    }
-                    arr = array_insert(arr, size, pos, value);
-                    array_print(arr, size);
+                }
+                if (pos > size) {
+                    std::cout << "Недопустимая позиция.\n";
                     break;
                 }
-                case 4: {
-                    if (size == 0) {
-                        std::cout << "Массив пуст.\n";
-                        break;
-                    }
-                    std::size_t pos = 0;
-                    if (!read_size("Индекс удаления: ", pos)) {
-                        running = false;
-                        break;
-                    }
-                    if (pos >= size) {
-                        std::cout << "Недопустимая позиция.\n";
-                        break;
-                    }
-                    arr = array_remove(arr, size, pos);
-                    array_print(arr, size);
+                if (!read_int("Значение: ", value)) {
+                    running = false;
                     break;
                 }
-                case 5: {
-                    std::size_t new_size = 0;
-                    if (!read_size("Новый размер: ", new_size)) {
-                        running = false;
-                        break;
-                    }
-                    arr = array_resize(arr, size, new_size);
-                    size = new_size;
-                    array_print(arr, size);
+                int* inserted = array_insert(arr, size, pos, value);
+                if (inserted == nullptr) {
+                    std::cout << "Не удалось выделить память. Исходный массив сохранён.\n";
                     break;
                 }
-                case 7: {
-                    int value = 0;
-                    if (!read_int("Удалить все вхождения числа: ", value)) {
-                        running = false;
-                        break;
-                    }
-                    array_gnome_sort(arr, size);
-                    std::cout << "После сортировки:\n";
-                    array_print(arr, size);
-                    const std::size_t removed = array_remove_all(arr, size, value);
-                    std::cout << "Удалено элементов: " << removed << '\n';
-                    array_print(arr, size);
-                    break;
-                }
-                case 8: {
-                    int target = 0;
-                    if (!read_int("Искомое число: ", target)) {
-                        running = false;
-                        break;
-                    }
-                    array_gnome_sort(arr, size);
-                    std::cout << "Массив для бинарного поиска:\n";
-                    array_print(arr, size);
-                    std::size_t index = 0;
-                    int value = 0;
-                    if (array_binary_search(arr, size, target, index, value)) {
-                        std::cout << "Найдено: индекс " << index
-                                  << ", значение " << value << '\n';
-                    } else {
-                        std::cout << "Элемент не найден.\n";
-                    }
-                    break;
-                }
-                default:
-                    std::cout << "Неизвестный пункт меню.\n";
+                arr = inserted;
+                array_print(arr, size);
+                break;
             }
-        } catch (const std::bad_alloc&) {
-            std::cout << "Не удалось выделить память. Исходный массив сохранён.\n";
+            case 4: {
+                if (size == 0) {
+                    std::cout << "Массив пуст.\n";
+                    break;
+                }
+                std::size_t pos = 0;
+                if (!read_size("Индекс удаления: ", pos)) {
+                    running = false;
+                    break;
+                }
+                if (pos >= size) {
+                    std::cout << "Недопустимая позиция.\n";
+                    break;
+                }
+                int* shortened = array_remove(arr, size, pos);
+                if (shortened == nullptr && size != 0) {
+                    std::cout << "Не удалось выделить память. Исходный массив сохранён.\n";
+                    break;
+                }
+                arr = shortened;
+                array_print(arr, size);
+                break;
+            }
+            case 5: {
+                std::size_t new_size = 0;
+                if (!read_size("Новый размер: ", new_size)) {
+                    running = false;
+                    break;
+                }
+                int* resized = array_resize(arr, size, new_size);
+                if (resized == nullptr && new_size != 0) {
+                    std::cout << "Не удалось выделить память. Исходный массив сохранён.\n";
+                    break;
+                }
+                arr = resized;
+                size = new_size;
+                array_print(arr, size);
+                break;
+            }
+            case 7: {
+                int value = 0;
+                if (!read_int("Удалить все вхождения числа: ", value)) {
+                    running = false;
+                    break;
+                }
+                array_gnome_sort(arr, size);
+                std::cout << "После сортировки:\n";
+                array_print(arr, size);
+                const std::size_t old_size = size;
+                int* filtered = array_remove_all(arr, size, value);
+                if (filtered == nullptr && size != 0) {
+                    std::cout << "Не удалось выделить память. Исходный массив сохранён.\n";
+                    break;
+                }
+                arr = filtered;
+                const std::size_t removed = old_size - size;
+                std::cout << "Удалено элементов: " << removed << '\n';
+                array_print(arr, size);
+                break;
+            }
+            case 8: {
+                int target = 0;
+                if (!read_int("Искомое число: ", target)) {
+                    running = false;
+                    break;
+                }
+                array_gnome_sort(arr, size);
+                std::cout << "Массив для бинарного поиска:\n";
+                array_print(arr, size);
+                std::size_t index = 0;
+                int value = 0;
+                if (array_binary_search(arr, size, target, index, value)) {
+                    std::cout << "Найдено: индекс " << index
+                              << ", значение " << value << '\n';
+                } else {
+                    std::cout << "Элемент не найден.\n";
+                }
+                break;
+            }
+            default:
+                std::cout << "Неизвестный пункт меню.\n";
         }
     }
 

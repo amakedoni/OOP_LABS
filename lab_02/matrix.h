@@ -1,5 +1,4 @@
-#ifndef LAB02_MATRIX_H
-#define LAB02_MATRIX_H
+#pragma once
 
 #include <cstddef>
 #include <iosfwd>
@@ -28,5 +27,3 @@ private:
     std::size_t cols_ = 0;
     double* data_ = nullptr;
 };
-
-#endif

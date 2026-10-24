@@ -2,9 +2,15 @@
 
 #include <gtest/gtest.h>
 #include <limits>
-#include <new>
 
 namespace {
+int* copy_array(const int* values, std::size_t size) {
+    int* arr = array_create(size);
+    if (arr == nullptr) return nullptr;
+    for (std::size_t i = 0; i < size; ++i) arr[i] = values[i];
+    return arr;
+}
+
 void expect_array(const int* arr, std::size_t size,
                   const int* expected, std::size_t expected_size) {
     ASSERT_EQ(size, expected_size);
@@ -71,8 +77,10 @@ TEST(GnomeSort, MixedNumbersAndDuplicates) {
 TEST(BinarySearch, FindsFirstOccurrence) {
     const int arr[] = {-7, 0, 2, 2, 2, 8};
     std::size_t index = 99;
-    ASSERT_TRUE(array_binary_search(arr, 6, 2, index));
+    int value = 0;
+    ASSERT_TRUE(array_binary_search(arr, 6, 2, index, value));
     EXPECT_EQ(index, 2u);
+    EXPECT_EQ(value, 2);
 }
 
 TEST(BinarySearch, ReturnsIndexAndValueByReference) {
@@ -85,11 +93,15 @@ TEST(BinarySearch, ReturnsIndexAndValueByReference) {
 }
 
 TEST(RemoveAll, ExampleFromAssignmentKeepsOrder) {
-    int arr[] = {2, 5, 2, 8, 2, 1};
+    const int values[] = {2, 5, 2, 8, 2, 1};
+    int* arr = copy_array(values, 6);
+    ASSERT_NE(arr, nullptr);
     std::size_t size = 6;
-    EXPECT_EQ(array_remove_all(arr, size, 2), 3u);
+    arr = array_remove_all(arr, size, 2);
+    ASSERT_NE(arr, nullptr);
     const int expected[] = {5, 8, 1};
     expect_array(arr, size, expected, 3);
+    array_delete(arr);
 }
 
 TEST(ArrayMemory, EmptyAndRepeatedDelete) {
@@ -144,8 +156,7 @@ TEST(ArrayResize, SameSizePreservesValues) {
 TEST(ArrayResize, AllocationFailurePreservesOriginal) {
     int* arr = array_create(1);
     arr[0] = 42;
-    EXPECT_THROW(array_resize(arr, 1, std::numeric_limits<std::size_t>::max()),
-                 std::bad_alloc);
+    EXPECT_EQ(array_resize(arr, 1, std::numeric_limits<std::size_t>::max()), nullptr);
     EXPECT_EQ(arr[0], 42);
     array_delete(arr);
 }
@@ -252,18 +263,21 @@ TEST(GnomeSort, ExtremeIntegers) {
 TEST(BinarySearch, FirstAndLastElements) {
     const int arr[] = {-8, 0, 4};
     std::size_t index = 99;
-    ASSERT_TRUE(array_binary_search(arr, 3, -8, index));
+    int value = 0;
+    ASSERT_TRUE(array_binary_search(arr, 3, -8, index, value));
     EXPECT_EQ(index, 0u);
-    ASSERT_TRUE(array_binary_search(arr, 3, 4, index));
+    EXPECT_EQ(value, -8);
+    ASSERT_TRUE(array_binary_search(arr, 3, 4, index, value));
     EXPECT_EQ(index, 2u);
+    EXPECT_EQ(value, 4);
 }
 
 TEST(BinarySearch, MissingValuePreservesOutputs) {
     const int arr[] = {-8, 0, 4};
     std::size_t index = 99;
     int value = 42;
-    EXPECT_FALSE(array_binary_search(arr, 3, -9, index));
-    EXPECT_FALSE(array_binary_search(arr, 3, 1, index));
+    EXPECT_FALSE(array_binary_search(arr, 3, -9, index, value));
+    EXPECT_FALSE(array_binary_search(arr, 3, 1, index, value));
     EXPECT_FALSE(array_binary_search(arr, 3, 5, index, value));
     EXPECT_EQ(index, 99u);
     EXPECT_EQ(value, 42);
@@ -280,45 +294,62 @@ TEST(BinarySearch, EmptyPreservesOutputs) {
 TEST(BinarySearch, SingleElement) {
     const int arr[] = {7};
     std::size_t index = 99;
-    ASSERT_TRUE(array_binary_search(arr, 1, 7, index));
+    int value = 0;
+    ASSERT_TRUE(array_binary_search(arr, 1, 7, index, value));
     EXPECT_EQ(index, 0u);
-    EXPECT_FALSE(array_binary_search(arr, 1, 8, index));
+    EXPECT_EQ(value, 7);
+    EXPECT_FALSE(array_binary_search(arr, 1, 8, index, value));
 }
 
 TEST(RemoveAll, NoMatches) {
-    int arr[] = {1, 3, 5};
+    const int values[] = {1, 3, 5};
+    int* arr = copy_array(values, 3);
+    ASSERT_NE(arr, nullptr);
     std::size_t size = 3;
-    EXPECT_EQ(array_remove_all(arr, size, 2), 0u);
+    arr = array_remove_all(arr, size, 2);
+    ASSERT_NE(arr, nullptr);
     const int expected[] = {1, 3, 5};
     expect_array(arr, size, expected, 3);
+    array_delete(arr);
 }
 
 TEST(RemoveAll, EveryElementMatches) {
-    int arr[] = {2, 2, 2};
+    const int values[] = {2, 2, 2};
+    int* arr = copy_array(values, 3);
+    ASSERT_NE(arr, nullptr);
     std::size_t size = 3;
-    EXPECT_EQ(array_remove_all(arr, size, 2), 3u);
+    arr = array_remove_all(arr, size, 2);
     EXPECT_EQ(size, 0u);
+    EXPECT_EQ(arr, nullptr);
+    array_delete(arr);
 }
 
 TEST(RemoveAll, Empty) {
     std::size_t size = 0;
-    EXPECT_EQ(array_remove_all(nullptr, size, 2), 0u);
+    EXPECT_EQ(array_remove_all(nullptr, size, 2), nullptr);
     EXPECT_EQ(size, 0u);
 }
 
 TEST(RemoveAll, AdjacentMatchesAndEnds) {
-    int arr[] = {2, 2, -3, 2, 4, 2};
+    const int values[] = {2, 2, -3, 2, 4, 2};
+    int* arr = copy_array(values, 6);
+    ASSERT_NE(arr, nullptr);
     std::size_t size = 6;
-    EXPECT_EQ(array_remove_all(arr, size, 2), 4u);
+    arr = array_remove_all(arr, size, 2);
+    ASSERT_NE(arr, nullptr);
     const int expected[] = {-3, 4};
     expect_array(arr, size, expected, 2);
+    array_delete(arr);
 }
 
 TEST(VariantFour, SortRemoveAndSearch) {
-    int arr[] = {2, 5, 2, 8, 2, 1};
+    const int values[] = {2, 5, 2, 8, 2, 1};
+    int* arr = copy_array(values, 6);
+    ASSERT_NE(arr, nullptr);
     std::size_t size = 6;
     array_gnome_sort(arr, size);
-    EXPECT_EQ(array_remove_all(arr, size, 2), 3u);
+    arr = array_remove_all(arr, size, 2);
+    ASSERT_NE(arr, nullptr);
     const int expected[] = {1, 5, 8};
     expect_array(arr, size, expected, 3);
     std::size_t index = 99;
@@ -327,4 +358,5 @@ TEST(VariantFour, SortRemoveAndSearch) {
     EXPECT_EQ(index, 1u);
     EXPECT_EQ(value, 5);
     EXPECT_FALSE(array_binary_search(arr, size, 2, index, value));
+    array_delete(arr);
 }

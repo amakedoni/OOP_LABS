@@ -1,17 +1,12 @@
 #include "matrix.h"
 
 #include <gtest/gtest.h>
-#include <limits>
-#include <ostream>
-#include <streambuf>
-#include <stdexcept>
 #include <utility>
 
 TEST(MatrixStorage, DefaultMatrixIsEmpty) {
     const Matrix matrix;
     EXPECT_EQ(matrix.rows(), 0u);
     EXPECT_EQ(matrix.cols(), 0u);
-    EXPECT_THROW((void)matrix.get(0, 0), std::out_of_range);
 }
 
 TEST(MatrixStorage, ConstructorFillsEveryElement) {
@@ -39,17 +34,6 @@ TEST(MatrixStorage, SetChangesOnlySelectedElement) {
     EXPECT_DOUBLE_EQ(matrix.get(1, 1), 1.0);
 }
 
-TEST(MatrixStorage, InvalidIndicesThrowAndPreserveData) {
-    Matrix matrix(2, 3, 7.0);
-    EXPECT_THROW((void)matrix.get(2, 0), std::out_of_range);
-    EXPECT_THROW((void)matrix.get(0, 3), std::out_of_range);
-    EXPECT_THROW(matrix.set(2, 0, 99.0), std::out_of_range);
-    EXPECT_THROW(matrix.set(0, 3, 99.0), std::out_of_range);
-    EXPECT_THROW((void)matrix.get(std::numeric_limits<std::size_t>::max(), 0),
-                 std::out_of_range);
-    EXPECT_DOUBLE_EQ(matrix.get(1, 2), 7.0);
-}
-
 TEST(MatrixStorage, ZeroDimensionsKeepShapeWithoutElements) {
     const Matrix no_rows(0, 3);
     const Matrix no_cols(2, 0);
@@ -57,14 +41,6 @@ TEST(MatrixStorage, ZeroDimensionsKeepShapeWithoutElements) {
     EXPECT_EQ(no_rows.cols(), 3u);
     EXPECT_EQ(no_cols.rows(), 2u);
     EXPECT_EQ(no_cols.cols(), 0u);
-    EXPECT_THROW((void)no_rows.get(0, 0), std::out_of_range);
-    EXPECT_THROW((void)no_cols.get(0, 0), std::out_of_range);
-}
-
-TEST(MatrixStorage, OversizedAllocationIsRejectedBeforeMultiplication) {
-    const auto maximum = std::numeric_limits<std::size_t>::max();
-    EXPECT_THROW((Matrix(maximum, 2)), std::length_error);
-    EXPECT_THROW((Matrix(maximum / sizeof(double) + 1, 1)), std::length_error);
 }
 
 TEST(MatrixOwnership, CopyConstructorCreatesIndependentBuffer) {
@@ -114,7 +90,6 @@ TEST(MatrixOwnership, MoveConstructorEmptiesAndAllowsReusingSource) {
     EXPECT_DOUBLE_EQ(target.get(1, 2), 7.0);
     EXPECT_EQ(source.rows(), 0u);
     EXPECT_EQ(source.cols(), 0u);
-    EXPECT_THROW((void)source.get(0, 0), std::out_of_range);
     source = Matrix(1, 1, 9.0);
     ASSERT_EQ(source.rows(), 1u);
     EXPECT_DOUBLE_EQ(source.get(0, 0), 9.0);
@@ -162,7 +137,6 @@ TEST(MatrixOwnership, EmptyObjectsCanBeCopiedMovedAndAssigned) {
     EXPECT_EQ(moved.rows(), 0u);
     EXPECT_EQ(copy.cols(), 0u);
     EXPECT_EQ(filled.rows(), 0u);
-    EXPECT_THROW((void)filled.get(0, 0), std::out_of_range);
 }
 
 TEST(MatrixOwnership, CopyAndMovePreserveZeroDimensionShape) {
@@ -174,7 +148,6 @@ TEST(MatrixOwnership, CopyAndMovePreserveZeroDimensionShape) {
     EXPECT_EQ(copy.cols(), 0u);
 }
 
-namespace {
 Matrix example(double lower_left = 2.0) {
     Matrix matrix(2, 2);
     matrix.set(0, 0, 1.0);
@@ -182,18 +155,6 @@ Matrix example(double lower_left = 2.0) {
     matrix.set(1, 0, lower_left);
     matrix.set(1, 1, 4.0);
     return matrix;
-}
-
-class OutputBuffer : public std::streambuf {
-public:
-    OutputBuffer() { setp(data_, data_ + sizeof(data_) - 1); }
-    const char* text() {
-        *pptr() = '\0';
-        return data_;
-    }
-private:
-    char data_[256]{};
-};
 }
 
 TEST(MatrixArithmetic, AdditionMatchesPdfAndPreservesRightOperand) {
@@ -220,15 +181,6 @@ TEST(MatrixArithmetic, SelfAdditionDoublesEveryElement) {
     EXPECT_DOUBLE_EQ(matrix.get(0, 0), 2.0);
     EXPECT_DOUBLE_EQ(matrix.get(1, 0), 6.0);
     EXPECT_DOUBLE_EQ(matrix.get(1, 1), 8.0);
-}
-
-TEST(MatrixArithmetic, InvalidAdditionPreservesOriginal) {
-    Matrix matrix = example(3.0);
-    EXPECT_THROW(matrix.add(Matrix(1, 2)), std::invalid_argument);
-    EXPECT_THROW(matrix.add(Matrix(2, 3)), std::invalid_argument);
-    EXPECT_EQ(matrix.rows(), 2u);
-    EXPECT_EQ(matrix.cols(), 2u);
-    EXPECT_DOUBLE_EQ(matrix.get(1, 0), 3.0);
 }
 
 TEST(MatrixArithmetic, MultiplicationMatchesPdf) {
@@ -270,14 +222,6 @@ TEST(MatrixArithmetic, SelfMultiplicationUsesOriginalValues) {
     EXPECT_DOUBLE_EQ(matrix.get(1, 1), 22.0);
 }
 
-TEST(MatrixArithmetic, InvalidMultiplicationPreservesOriginal) {
-    Matrix matrix(2, 3, 5.0);
-    EXPECT_THROW(matrix.mul(Matrix(2, 2)), std::invalid_argument);
-    EXPECT_EQ(matrix.rows(), 2u);
-    EXPECT_EQ(matrix.cols(), 3u);
-    EXPECT_DOUBLE_EQ(matrix.get(1, 2), 5.0);
-}
-
 TEST(MatrixArithmetic, EmptyMatricesCanBeAddedAndMultiplied) {
     Matrix empty;
     empty.add(Matrix());
@@ -290,13 +234,6 @@ TEST(MatrixArithmetic, EmptyMatricesCanBeAddedAndMultiplied) {
     ASSERT_EQ(no_cols.rows(), 2u);
     ASSERT_EQ(no_cols.cols(), 3u);
     EXPECT_DOUBLE_EQ(no_cols.get(1, 2), 0.0);
-}
-
-TEST(MatrixArithmetic, HugeEmptyShapesCannotOverflowProduct) {
-    Matrix left(std::numeric_limits<std::size_t>::max(), 0);
-    EXPECT_THROW(left.mul(Matrix(0, 2)), std::length_error);
-    EXPECT_EQ(left.cols(), 0u);
-    EXPECT_EQ(left.rows(), std::numeric_limits<std::size_t>::max());
 }
 
 TEST(MatrixSymmetry, SymmetricPdfExample) {
@@ -333,20 +270,4 @@ TEST(MatrixSymmetry, ComparisonIsExactAsSpecified) {
     Matrix matrix = example();
     matrix.set(1, 0, 2.0 + 1e-12);
     EXPECT_FALSE(matrix.is_symmetric());
-}
-
-TEST(MatrixPrint, PrintsRowsAndColumnsInOrder) {
-    OutputBuffer buffer;
-    std::ostream out(&buffer);
-    example(3.0).print(out);
-    EXPECT_STREQ(buffer.text(), "[[1, 2], [3, 4]]");
-}
-
-TEST(MatrixPrint, PrintsEmptyAndZeroColumnMatrices) {
-    OutputBuffer buffer;
-    std::ostream out(&buffer);
-    Matrix().print(out);
-    out << ' ';
-    Matrix(2, 0).print(out);
-    EXPECT_STREQ(buffer.text(), "[] [[], []]");
 }

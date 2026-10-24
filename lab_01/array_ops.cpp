@@ -6,9 +6,9 @@
 
 int* array_create(std::size_t size) {
     if (size > std::numeric_limits<std::size_t>::max() / sizeof(int)) {
-        throw std::bad_array_new_length();
+        return nullptr;
     }
-    return size == 0 ? nullptr : new int[size]{};
+    return size == 0 ? nullptr : new (std::nothrow) int[size]{};
 }
 
 void array_delete(int*& arr) {
@@ -19,6 +19,7 @@ void array_delete(int*& arr) {
 int* array_resize(int* arr, std::size_t size, std::size_t new_size) {
     if (size == new_size) return arr;
     int* resized = array_create(new_size);
+    if (new_size != 0 && resized == nullptr) return nullptr;
     for (std::size_t i = 0; i < size && i < new_size; ++i) {
         resized[i] = arr[i];
     }
@@ -29,9 +30,10 @@ int* array_resize(int* arr, std::size_t size, std::size_t new_size) {
 int* array_insert(int* arr, std::size_t& size, std::size_t pos, int value) {
     if (pos > size) return arr;
     if (size == std::numeric_limits<std::size_t>::max()) {
-        throw std::bad_array_new_length();
+        return nullptr;
     }
     int* inserted = array_create(size + 1);
+    if (inserted == nullptr) return nullptr;
     for (std::size_t i = 0; i < pos; ++i) inserted[i] = arr[i];
     inserted[pos] = value;
     for (std::size_t i = pos; i < size; ++i) inserted[i + 1] = arr[i];
@@ -43,6 +45,7 @@ int* array_insert(int* arr, std::size_t& size, std::size_t pos, int value) {
 int* array_remove(int* arr, std::size_t& size, std::size_t pos) {
     if (pos >= size) return arr;
     int* removed = array_create(size - 1);
+    if (size > 1 && removed == nullptr) return nullptr;
     for (std::size_t i = 0; i < pos; ++i) removed[i] = arr[i];
     for (std::size_t i = pos + 1; i < size; ++i) removed[i - 1] = arr[i];
     array_delete(arr);
@@ -73,8 +76,7 @@ void array_gnome_sort(int* arr, std::size_t size) {
     }
 }
 
-bool array_binary_search(const int* arr, std::size_t size, int target,
-                         std::size_t& out_index) {
+bool array_binary_search(const int* arr, std::size_t size, int target, std::size_t& out_index, int& out_value) {
     std::size_t left = 0;
     std::size_t right = size;
     while (left < right) {
@@ -84,22 +86,25 @@ bool array_binary_search(const int* arr, std::size_t size, int target,
     }
     if (left == size || arr[left] != target) return false;
     out_index = left;
+    out_value = arr[left];
     return true;
 }
 
-bool array_binary_search(const int* arr, std::size_t size, int target,
-                         std::size_t& out_index, int& out_value) {
-    if (!array_binary_search(arr, size, target, out_index)) return false;
-    out_value = arr[out_index];
-    return true;
-}
-
-std::size_t array_remove_all(int* arr, std::size_t& size, int value) {
+int* array_remove_all(int* arr, std::size_t& size, int value) {
+    std::size_t new_size = 0;
+    for (std::size_t i = 0; i < size; ++i) {
+        if (arr[i] != value) ++new_size;
+    }
+    int* filtered = array_create(new_size);
+    if (new_size != 0 && filtered == nullptr) return nullptr;
     std::size_t write = 0;
     for (std::size_t read = 0; read < size; ++read) {
-        if (arr[read] != value) arr[write++] = arr[read];
+        if (arr[read] != value) {
+            filtered[write] = arr[read];
+            ++write;
+        }
     }
-    const std::size_t removed = size - write;
-    size = write;
-    return removed;
+    array_delete(arr);
+    size = new_size;
+    return filtered;
 }

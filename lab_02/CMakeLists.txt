@@ -35,7 +35,7 @@ if(BUILD_TESTING)
     target_link_libraries(test_matrix PRIVATE matrix GTest::gtest_main)
     include(GoogleTest)
     gtest_discover_tests(test_matrix)
-    foreach(scenario symmetric asymmetric rectangular basic invalid incompatible eof eof_create no_newline demo long_token)
+    foreach(scenario symmetric asymmetric rectangular basic empty invalid incompatible eof eof_create no_newline long_token)
         add_test(NAME Menu.${scenario}
             COMMAND "${CMAKE_COMMAND}" "-DPROGRAM=$<TARGET_FILE:lab02>"
                 "-DSCENARIO=${scenario}" -P "${CMAKE_CURRENT_SOURCE_DIR}/tests/check_menu.cmake")
