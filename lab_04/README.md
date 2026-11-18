@@ -56,4 +56,4 @@ ctest --test-dir build-asan --output-on-failure
 
 На macOS утечки можно проверить отдельно командой `leaks --atExit -- ./build/lab_04_tests`.
 
-В папке `docs` лежат материалы по прежней версии.
+Разбор текущего кода для защиты: [читать на GitHub](docs/EXPLANATION.md) или [открыть в Word](docs/lab-04-code-explanation.docx).
